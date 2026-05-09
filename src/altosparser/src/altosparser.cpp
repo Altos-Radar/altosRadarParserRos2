@@ -7,8 +7,8 @@
 #include <netinet/in.h>
 #include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <ros/ros.h>
-#include <sensor_msgs/PointCloud2.h>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,9 +17,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
-#include <visualization_msgs/Marker.h>
-#include <tf/tf.h>
-#include <tf/transform_broadcaster.h>
+#include <visualization_msgs/msg/marker.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <array>
 using namespace std;
 #define vrMax 60
@@ -39,7 +40,7 @@ struct RadarUnit
 {
     std::string topicName;
     std::array<double, 6> installParam;
-    ros::Publisher pubCloud;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubCloud;
 
     vector<POINTCLOUD> pointCloudVec;
 
@@ -178,51 +179,56 @@ void calPoint(vector<POINTCLOUD> pointCloudVec,pcl::PointCloud<pcl::PointXYZHSV>
 
 int main(int argc, char** argv) {
     
+    // ros Init
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<rclcpp::Node>("altosParser");
+
     // read files for rcs calculation
     float* rcsBuf = (float*)malloc(1201 * sizeof(float));
     FILE* fp_rcs = fopen("data//rcs.dat", "rb");
     if (fp_rcs == NULL)
     {
-        ROS_ERROR("[WARNING] data/rcs.dat not found in pwd [WARNING]\n");
+        RCLCPP_ERROR(node->get_logger(), "[WARNING] data/rcs.dat not found in pwd [WARNING]\n");
         return -1;
     } 
     fread(rcsBuf, 1201, sizeof(float), fp_rcs);
     fclose(fp_rcs);
 
-    // ros Init
-    ros::init(argc, argv, "altosParser");
-    ros::NodeHandle nh;
-
     int numRadar = 4;
-    nh.getParam("altosParserParameters/numRadar", numRadar);
+    node->declare_parameter<int>("altosParserParameters.numRadar", numRadar);
+    node->get_parameter("altosParserParameters.numRadar", numRadar);
     if (numRadar != 1 && numRadar != 4)
     {
-        ROS_ERROR("numRadar is %d, must be 1 (V4) or 4 (RCU)", numRadar);
+        RCLCPP_ERROR(node->get_logger(),"numRadar is %d, must be 1 (V4) or 4 (RCU)", numRadar);
         return -1;
     }
     std::vector<RadarUnit> radars(numRadar);
 
     std:string baseFrameID ="base";
-    nh.getParam("altosParserParameters/baseFrameID", baseFrameID);
+    node->declare_parameter<std::string>("altosParserParameters.baseFrameID", baseFrameID);
+    baseFrameID = node->get_parameter("altosParserParameters.baseFrameID").as_string();
 
     bool sendTF;
-    nh.getParam("altosParserParameters/sendTF", sendTF);
+    node->declare_parameter<std::string>("altosParserParameters.sendTF", sendTF);
+    node->get_parameter("altosParserParameters.sendTF", sendTF);
 
     for (int radarId = 0; radarId < numRadar; radarId++)
     {
-        std::string paramPath = "altosParserParameters/radar" + std::to_string(radarId);
-        nh.getParam(paramPath + "/topicName", radars[radarId].topicName);
+        std::string paramPath = "altosParserParameters.radar" + std::to_string(radarId);
+        node->declare_parameter<std::string>(paramPath + ".topicName", "radar" + std::to_string(radarId));
+        node->get_parameter(paramPath + ".topicName", radars[radarId].topicName);
         if (radars[radarId].topicName.empty())
         {
-            ROS_ERROR("radar%d topic name is empty!", radarId);
+            RCLCPP_ERROR(node->get_logger(), "radar%d topic name is empty!", radarId);
             return -1;
         }
 
         std::vector<double> tmpVec;
-        nh.getParam(paramPath + "/installationParam", tmpVec);
+        node->declare_parameter<std::vector<double>>(paramPath + ".installationParam", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+        tmpVec = node->get_parameter(paramPath + ".installationParam").as_double_array();
         if (tmpVec.size() != 6)
         {
-            ROS_ERROR("radar%d: Invalid installation parameters! Required 6 values, got %ld.", radarId, tmpVec.size());
+            RCLCPP_ERROR(node->get_logger(), "radar%d: Invalid installation parameters! Required 6 values, got %ld.", radarId, tmpVec.size());
             return -1;
         }
         for (int i = 3; i < 6; i++)
@@ -231,21 +237,21 @@ int main(int argc, char** argv) {
         }
         std::copy(tmpVec.begin(), tmpVec.end(), radars[radarId].installParam.begin());
     
-        radars[radarId].pubCloud = nh.advertise<sensor_msgs::PointCloud2>(
+        radars[radarId].pubCloud = node->create_publisher<sensor_msgs::msg::PointCloud2>(
             radars[radarId].topicName , 1);
     }
 
-    ros::Publisher markerPub = nh.advertise<visualization_msgs::Marker>("TEXT_VIEW_FACING", 10);
-    ros::Publisher originPub = nh.advertise<visualization_msgs::Marker>("origin", 10);
+    auto markerPub = node->create_publisher<visualization_msgs::msg::Marker>("TEXT_VIEW_FACING", 10);
+    auto originPub = node->create_publisher<visualization_msgs::msg::Marker>("origin", 10);
 
-    sensor_msgs::PointCloud2 output;
+    sensor_msgs::msg::PointCloud2 output;
     pcl::PointCloud<pcl::PointXYZHSV>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZHSV>);
     cloud->reserve(10000);
 
-    visualization_msgs::Marker origin;
+    visualization_msgs::msg::Marker origin;
     origin.header.frame_id = baseFrameID;
-    origin.type = visualization_msgs::Marker::SPHERE;
-    origin.action = visualization_msgs::Marker::ADD;
+    origin.type = visualization_msgs::msg::Marker::SPHERE;
+    origin.action = visualization_msgs::msg::Marker::ADD;
 
     origin.pose.position.x = 0;
     origin.pose.position.y = 0;
@@ -263,25 +269,25 @@ int main(int argc, char** argv) {
     origin.color.b = 0.0;
     origin.color.a = 1;
 
-    visualization_msgs::Marker marker;
+    visualization_msgs::msg::Marker marker;
     marker.ns = "basic_shapes";
-    marker.action = visualization_msgs::Marker::ADD;
+    marker.action = visualization_msgs::msg::Marker::ADD;
     marker.pose.orientation.w = 1.0;
     marker.id =0;
-    marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+    marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     marker.scale.z = 10;
     marker.color.b = 1.0f;
     marker.color.g = 1.0f;
     marker.color.r = 1.0f;
     marker.color.a = 1;
-    geometry_msgs::Pose pose;
-    pose.position.x =  (float)-5;
-    pose.position.y =  0;
-    pose.position.z =0;
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = (float)-5;
+    pose.position.y = 0;
+    pose.position.z = 0;
 
-    tf::Transform transform;
-    tf::Quaternion q;
-    static tf::TransformBroadcaster tfBr;
+    tf2_ros::TransformBroadcaster tfBr(node);
+    tf2::Quaternion q;
+    geometry_msgs::msg::TransformStamped transformStamped;
     
     // socket Gen
     struct sockaddr_in  from;
@@ -299,7 +305,7 @@ int main(int argc, char** argv) {
     unsigned char       mode;
     float*              histBuf = (float*)malloc(sizeof(float) * int((vrMax - vrMin) / vStep));
 
-    while(ros::ok())
+    while(rclcpp::ok())
     {
         memset(recvBuf,0,sizeof(POINTCLOUD));
         int ret = recvfrom(sockfd, recvBuf, sizeof(POINTCLOUD), 0, (struct sockaddr *)&from, &len);
@@ -310,7 +316,7 @@ int main(int argc, char** argv) {
             uint32_t offset = pointCloudBuf.pckHeader.offset;
             if (radarId >= numRadar)
             {
-                ROS_ERROR("radarId = %u in PCKHEADER.reserved >= numRadar = %u ", radarId, numRadar);
+                RCLCPP_ERROR(node->get_logger(), "radarId = %u in PCKHEADER.reserved >= numRadar = %u ", radarId, numRadar);
                 continue; 
             }
             radars[radarId].pointCloudVec.push_back(pointCloudBuf);
@@ -323,59 +329,53 @@ int main(int argc, char** argv) {
                 // tf
                 if(sendTF)
                 {
-                    transform.setOrigin(
-                        tf::Vector3(
-                            radars[radarId].installParam[0],
-                            radars[radarId].installParam[1], 
-                            radars[radarId].installParam[2]
-                        )
-                    ); // x, y, z
+                    transformStamped.header.stamp = node->get_clock()->now();
+                    transformStamped.header.frame_id = baseFrameID;
+                    transformStamped.child_frame_id = radars[radarId].topicName;
+
+                    transformStamped.transform.translation.x = radars[radarId].installParam[0];
+                    transformStamped.transform.translation.y = radars[radarId].installParam[1];
+                    transformStamped.transform.translation.z = radars[radarId].installParam[2];
+
                     q.setRPY(
                         radars[radarId].installParam[3], 
                         radars[radarId].installParam[4], 
                         radars[radarId].installParam[5]
                     ); // roll, pitch, yaw
-                    transform.setRotation(q);
-                    tfBr.sendTransform(
-                        tf::StampedTransform(
-                            transform,
-                            ros::Time::now(),
-                            baseFrameID,
-                            radars[radarId].topicName
-                        )
-                    );
+                    transformStamped.transform.rotation = tf2::toMsg(q);
+                    tfBr.sendTransform(transformStamped);
                 }
                 
                 //pub point cloud
                 pcl::toROSMsg(*cloud, output);
                 output.header.frame_id = radars[radarId].topicName;
-                output.header.stamp = ros::Time::now();
-                ROS_INFO("pointNum of %d frame of %s: %d\n",
+                output.header.stamp = node->get_clock()->now();
+                RCLCPP_INFO(node->get_logger(), "pointNum of %d frame of %s: %d\n",
                        pointCloudBuf.pckHeader.frame_id,
                        radars[radarId].topicName.c_str(),
                        radars[radarId].cntPointCloud);
-                output.header.stamp = ros::Time::now();
-                radars[radarId].pubCloud.publish(output);
+                radars[radarId].pubCloud->publish(output);
 
                 //print measure time stamp
                 uint64_t sec = pointCloudBuf.pckHeader.sec;
                 uint32_t nsec = pointCloudBuf.pckHeader.nsec;
                 double measureTime = (double)sec + (double)nsec / 1e9;
-                ROS_INFO("measure time stamp of %d frame of %s: %lu.%09lu\n",
+                RCLCPP_INFO(node->get_logger(), "measure time stamp of %d frame of %s: %lu.%09lu\n",
                        pointCloudBuf.pckHeader.frame_id,
                        radars[radarId].topicName.c_str(),
                        (unsigned long)sec,
                        (unsigned long)nsec);
 
-                originPub.publish(origin);
+                origin.header.stamp = node->get_clock()->now();
+                originPub->publish(origin);
 
                 marker.header.frame_id=radars[radarId].topicName;
-                marker.header.stamp = ros::Time::now();
-                ostringstream str;
+                marker.header.stamp = node->get_clock()->now();
+                std::ostringstream str;
                 str<<radars[radarId].topicName<<" pointNum: "<<radars[radarId].cntPointCloud;
                 marker.text=str.str();
                 marker.pose=pose;
-                markerPub.publish(marker);
+                markerPub->publish(marker);
 
                 // clear
                 radars[radarId].pointCloudVec.clear();
@@ -383,12 +383,13 @@ int main(int argc, char** argv) {
                 radars[radarId].cntPointCloud = 0;
             }
         } else {
-            ROS_ERROR("recv failed (timeOut)   %d\n", ret);
+            RCLCPP_ERROR(node->get_logger(), "recv failed (timeOut)   %d\n", ret);
         }
     }
 
     close(sockfd);
     free(histBuf);
     free(rcsBuf);
+    rclcpp::shutdown();
     return -1;
 }
