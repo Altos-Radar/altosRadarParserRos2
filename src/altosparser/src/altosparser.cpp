@@ -44,12 +44,12 @@ struct RadarUnit
 
     vector<POINTCLOUD> pointCloudVec;
 
-    int cntPointCloud = 0;
+    uint32_t cntPointCloud = 0;
 };
 
 float rcsCal(float range, float azi, float snr, float* rcsBuf) {
     int ind = (azi * 180 / PI + 60.1) * 10;
-    float rcs = powf32(range, 2.6) * snr / 5.0e6 / rcsBuf[ind];
+    float rcs = powf32(range, 2.6f) * snr / 5.0e6f / rcsBuf[ind];
 
     return rcs;
 }
@@ -109,7 +109,7 @@ float hist(vector<POINTCLOUD> pointCloudVec, float* histBuf, float yaw)
     int ind = 0;
     float vr = 0;
 
-    for (int i = 0; i < pointCloudVec.size(); i++)
+    for (size_t i = 0; i < pointCloudVec.size(); i++)
     {
         for (int j = 0; j < 30; j++)
         {
@@ -126,12 +126,12 @@ float hist(vector<POINTCLOUD> pointCloudVec, float* histBuf, float yaw)
     return float((max_element(histBuf, histBuf + (int((vrMax - vrMin) / vStep))) - histBuf)) * vStep + vrMin;
 }
 
-void calPoint(vector<POINTCLOUD> pointCloudVec,pcl::PointCloud<pcl::PointXYZHSV>::Ptr cloud,float *rcsBuf,float *histBuf,int pointNumPerPack,float yaw)
+void calPoint(vector<POINTCLOUD> pointCloudVec,pcl::PointCloud<pcl::PointXYZHSV>::Ptr cloud,float *rcsBuf,float *histBuf,size_t pointNumPerPack,float yaw)
 {
     pcl::PointXYZHSV cloudPoint;
-    for(int i = 0;i<pointCloudVec.size();i++)
+    for(size_t i = 0;i<pointCloudVec.size();i++)
     {
-        for(int j = 0;j<pointNumPerPack;j++)
+        for(size_t j = 0;j<pointNumPerPack;j++)
         {
             if(abs(pointCloudVec[i].point[j].range)>0&&abs(pointCloudVec[i].point[j].azi)<=80*PI/180)
             {
@@ -156,8 +156,8 @@ void calPoint(vector<POINTCLOUD> pointCloudVec,pcl::PointCloud<pcl::PointXYZHSV>
     memset(histBuf, 0, sizeof(float) * int((vrMax - vrMin) / vStep));
     float vrEst = hist(pointCloudVec, histBuf, yaw);
     float tmp;
-    for (int i = 0; i < pointCloudVec.size(); i++) {
-        for (int j = 0; j < pointNumPerPack; j++) {
+    for (size_t i = 0; i < pointCloudVec.size(); i++) {
+        for (size_t j = 0; j < pointNumPerPack; j++) {
             if(i*pointNumPerPack+j>=cloud->size())
             {
                 break;
@@ -181,7 +181,7 @@ int main(int argc, char** argv) {
     
     // ros Init
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<rclcpp::Node>("altosParser");
+    auto node = std::make_shared<rclcpp::Node>("altosparser");
 
     // read files for rcs calculation
     float* rcsBuf = (float*)malloc(1201 * sizeof(float));
@@ -195,8 +195,8 @@ int main(int argc, char** argv) {
     fclose(fp_rcs);
 
     int numRadar = 4;
-    node->declare_parameter<int>("altosParserParameters.numRadar", numRadar);
-    node->get_parameter("altosParserParameters.numRadar", numRadar);
+    node->declare_parameter<int>("numRadar", numRadar);
+    node->get_parameter("numRadar", numRadar);
     if (numRadar != 1 && numRadar != 4)
     {
         RCLCPP_ERROR(node->get_logger(),"numRadar is %d, must be 1 (V4) or 4 (RCU)", numRadar);
@@ -204,17 +204,17 @@ int main(int argc, char** argv) {
     }
     std::vector<RadarUnit> radars(numRadar);
 
-    std:string baseFrameID ="base";
-    node->declare_parameter<std::string>("altosParserParameters.baseFrameID", baseFrameID);
-    baseFrameID = node->get_parameter("altosParserParameters.baseFrameID").as_string();
+    std::string baseFrameID ="base";
+    node->declare_parameter<std::string>("baseFrameID", baseFrameID);
+    baseFrameID = node->get_parameter("baseFrameID").as_string();
 
     bool sendTF;
-    node->declare_parameter<std::string>("altosParserParameters.sendTF", sendTF);
-    node->get_parameter("altosParserParameters.sendTF", sendTF);
+    node->declare_parameter<bool>("sendTF", sendTF);
+    node->get_parameter("sendTF", sendTF);
 
     for (int radarId = 0; radarId < numRadar; radarId++)
     {
-        std::string paramPath = "altosParserParameters.radar" + std::to_string(radarId);
+        std::string paramPath = "radar" + std::to_string(radarId);
         node->declare_parameter<std::string>(paramPath + ".topicName", "radar" + std::to_string(radarId));
         node->get_parameter(paramPath + ".topicName", radars[radarId].topicName);
         if (radars[radarId].topicName.empty())
@@ -222,7 +222,11 @@ int main(int argc, char** argv) {
             RCLCPP_ERROR(node->get_logger(), "radar%d topic name is empty!", radarId);
             return -1;
         }
-
+        else
+        {
+            RCLCPP_INFO(node->get_logger(), "radar%d topic name is %s",radarId,radars[radarId].topicName.c_str());
+        }
+        
         std::vector<double> tmpVec;
         node->declare_parameter<std::vector<double>>(paramPath + ".installationParam", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
         tmpVec = node->get_parameter(paramPath + ".installationParam").as_double_array();
@@ -297,12 +301,9 @@ int main(int argc, char** argv) {
     // pointcloud recv para
     POINTCLOUD          pointCloudBuf;
     char*               recvBuf = (char*)&pointCloudBuf;
-    int                 pointNumPerPack = POINTNUM;
+    size_t              pointNumPerPack = POINTNUM;
     int                 pointSizeByte = sizeof(V2Point);
-    int                 recvFrameLen = 0;
-    float               vrEst = 0;
     uint8_t             radarId;
-    unsigned char       mode;
     float*              histBuf = (float*)malloc(sizeof(float) * int((vrMax - vrMin) / vStep));
 
     while(rclcpp::ok())
@@ -349,7 +350,7 @@ int main(int argc, char** argv) {
                 //pub point cloud
                 pcl::toROSMsg(*cloud, output);
                 output.header.frame_id = radars[radarId].topicName;
-                output.header.stamp = node->get_clock()->now();
+                output.header.stamp = transformStamped.header.stamp;
                 RCLCPP_INFO(node->get_logger(), "pointNum of %d frame of %s: %d\n",
                        pointCloudBuf.pckHeader.frame_id,
                        radars[radarId].topicName.c_str(),
@@ -359,7 +360,6 @@ int main(int argc, char** argv) {
                 //print measure time stamp
                 uint64_t sec = pointCloudBuf.pckHeader.sec;
                 uint32_t nsec = pointCloudBuf.pckHeader.nsec;
-                double measureTime = (double)sec + (double)nsec / 1e9;
                 RCLCPP_INFO(node->get_logger(), "measure time stamp of %d frame of %s: %lu.%09lu\n",
                        pointCloudBuf.pckHeader.frame_id,
                        radars[radarId].topicName.c_str(),

@@ -1,20 +1,19 @@
 altosparser:
-    ros__parameters:
-        altosParserParameters:
-            numRadar: 4 # set to 1 for V4, 4 for RCU
-            baseFrameID: 'base' # base frame ID for TF
-            sendTF: true # send TF between radar and base frame
-            # RCU: radar0-3 = port from left to right
-            # V4 : radar0
-            radar0:
-                topicName: 'radarFL' # used as topic name and frame ID
-                installationParam: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # x [m], y [m], z [m], roll [degree], pitch [degree], yaw [degree]
-            radar1:
-                topicName: 'radarFR' # used as topic name and frame ID
-                installationParam: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # x [m], y [m], z [m], roll [degree], pitch [degree], yaw [degree]
-            radar2:
-                topicName: 'radarRL' # used as topic name and frame ID
-                installationParam: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # x [m], y [m], z [m], roll [degree], pitch [degree], yaw [degree]
-            radar3:
-                topicName: 'radarRR' # used as topic name and frame ID
-                installationParam: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # x [m], y [m], z [m], roll [degree], pitch [degree], yaw [degree]
+  ros__parameters:
+    numRadar: 4 # set to 1 for V4, 4 for RCU
+    baseFrameID: 'base' # base frame ID for TF
+    sendTF: true # send TF between radar and base frame
+    # RCU: radar0-3 = port from left to right
+    # V4 : radar0
+    radar0:
+      topicName: 'radarFL' # used as topic name and frame ID
+      installationParam: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # x [m], y [m], z [m], roll [degree], pitch [degree], yaw [degree]
+    radar1:
+      topicName: 'radarFR' # used as topic name and frame ID
+      installationParam: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # x [m], y [m], z [m], roll [degree], pitch [degree], yaw [degree]
+    radar2:
+      topicName: 'radarRL' # used as topic name and frame ID
+      installationParam: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # x [m], y [m], z [m], roll [degree], pitch [degree], yaw [degree]
+    radar3:
+      topicName: 'radarRR' # used as topic name and frame ID
+      installationParam: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # x [m], y [m], z [m], roll [degree], pitch [degree], yaw [degree]
