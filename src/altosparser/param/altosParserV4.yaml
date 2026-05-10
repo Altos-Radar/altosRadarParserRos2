@@ -1,0 +1,13 @@
+v4/altosparser:
+  ros__parameters:
+    numRadar: 1 # set to 1 for V4, 4 for RCU
+    baseFrameID: 'base' # base frame ID for TF
+    sendTF: true # send TF between radar and base frame
+    radar0:
+      topicName: 'radarV4' # used as topic name and frame ID
+      installationParam: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # x [m], y [m], z [m], roll [degree], pitch [degree], yaw [degree]
+    groupIp: '224.1.2.4'
+    groupPort: 4040
+    localIp: '192.168.3.1'
+    uniPort: 4041
+    uniFlag: false

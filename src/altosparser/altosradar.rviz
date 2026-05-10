@@ -24,7 +24,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: radarFL
+    SyncSource: radarV4
 Visualization Manager:
   Class: ""
   Displays:
@@ -93,7 +93,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /radarFL
+        Value: /rcu/radarFL
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -126,7 +126,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /radarFR
+        Value: /rcu/radarFR
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -159,7 +159,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /radarRL
+        Value: /rcu/radarRL
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -192,7 +192,40 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /radarRR
+        Value: /rcu/radarRR
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 246; 97; 81
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: radarV4
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 1
+      Style: Points
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /v4/radarV4
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -207,7 +240,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /TEXT_VIEW_FACING
+        Value: /pointNum
       Value: true
     - Class: rviz_default_plugins/Marker
       Enabled: true

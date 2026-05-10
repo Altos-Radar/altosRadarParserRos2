@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-cmake_policy(SET CMP0144 NEW)
+set(CMAKE_POLICY_DEFAULT_CMP0144 NEW CACHE STRING "CMake policy CMP0144 default")
 project(altosparser)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -40,7 +40,7 @@ install(TARGETS altosparser
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY param
+install(DIRECTORY param launch data
   DESTINATION share/${PROJECT_NAME}
 )
 

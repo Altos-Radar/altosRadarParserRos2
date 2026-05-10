@@ -29,11 +29,6 @@ using namespace std;
 #define vStep 0.1
 #define errThr 3
 #define PI 3.1415926
-#define GROUPIP "224.1.2.4"
-#define GROUPPORT 4040
-#define LOCALIP "192.168.3.1"
-#define UNIPORT 4041
-#define UNIFLAG 0
 #define FLIPELELVATION -1
 #define INSTALLHEIGHT 1.85
 
@@ -55,7 +50,7 @@ float rcsCal(float range, float azi, float snr, float* rcsBuf) {
     return rcs;
 }
 
-int socketGen()
+int socketGen(string groupIp, int groupPort, string localIp, int uniPort, bool uniFlag)
 {
     struct sockaddr_in addr;
 
@@ -71,11 +66,11 @@ int socketGen()
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout,
                sizeof(struct timeval));
     memset(&addr, 0, sizeof(addr));
-    if(UNIFLAG)
+    if(uniFlag)
     {
         addr.sin_family = AF_INET;
-        addr.sin_port = htons(UNIPORT);
-        addr.sin_addr.s_addr = inet_addr(LOCALIP);
+        addr.sin_port = htons(uniPort);
+        addr.sin_addr.s_addr = inet_addr(localIp.c_str());
         int ret = bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
         if (-1 == ret) {
             perror("bind");
@@ -84,7 +79,7 @@ int socketGen()
     }else
     {
         addr.sin_family = AF_INET;
-        addr.sin_port = htons(GROUPPORT);
+        addr.sin_port = htons(groupPort);
         addr.sin_addr.s_addr = INADDR_ANY;
         int ret = bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
         if (-1 == ret) {
@@ -92,8 +87,8 @@ int socketGen()
             return -1;
         }
 
-        req.imr_multiaddr.s_addr = inet_addr(GROUPIP);
-        req.imr_interface.s_addr = inet_addr(LOCALIP);
+        req.imr_multiaddr.s_addr = inet_addr(groupIp.c_str());
+        req.imr_interface.s_addr = inet_addr(localIp.c_str());
         ;
         ret = setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &req, sizeof(req));
         if (ret < 0) {
@@ -197,6 +192,20 @@ int main(int argc, char** argv) {
     fread(rcsBuf, 1201, sizeof(float), fp_rcs);
     fclose(fp_rcs);
 
+    int groupPort = 4040, uniPort = 4041;
+    std::string groupIp = "224.1.2.4", localIp = "192.168.3.1";
+    bool uniFlag = false;
+    node->declare_parameter<std::string>("groupIp", groupIp);
+    node->declare_parameter<int>("groupPort", groupPort);
+    node->declare_parameter<std::string>("localIp", localIp);
+    node->declare_parameter<int>("uniPort", uniPort);
+    node->declare_parameter<bool>("uniFlag", uniFlag);
+    node->get_parameter("groupIp", groupIp);
+    node->get_parameter("groupPort", groupPort);
+    node->get_parameter("localIp", localIp);
+    node->get_parameter("uniPort", uniPort);
+    node->get_parameter("uniFlag", uniFlag);
+
     int numRadar = 4;
     node->declare_parameter<int>("numRadar", numRadar);
     node->get_parameter("numRadar", numRadar);
@@ -248,8 +257,8 @@ int main(int argc, char** argv) {
             radars[radarId].topicName , 1);
     }
 
-    auto markerPub = node->create_publisher<visualization_msgs::msg::Marker>("TEXT_VIEW_FACING", 10);
-    auto originPub = node->create_publisher<visualization_msgs::msg::Marker>("origin", 10);
+    auto markerPub = node->create_publisher<visualization_msgs::msg::Marker>("/pointNum", 10);
+    auto originPub = node->create_publisher<visualization_msgs::msg::Marker>("/origin", 10);
 
     sensor_msgs::msg::PointCloud2 output;
     pcl::PointCloud<pcl::PointXYZHSV>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZHSV>);
@@ -299,7 +308,7 @@ int main(int argc, char** argv) {
     // socket Gen
     struct sockaddr_in  from;
     socklen_t           len = sizeof(from);
-    int                 sockfd = socketGen();
+    int                 sockfd = socketGen(groupIp, groupPort, localIp, uniPort, uniFlag);
     
     // pointcloud recv para
     POINTCLOUD          pointCloudBuf;
@@ -354,7 +363,7 @@ int main(int argc, char** argv) {
                 pcl::toROSMsg(*cloud, output);
                 output.header.frame_id = radars[radarId].topicName;
                 output.header.stamp = transformStamped.header.stamp;
-                RCLCPP_INFO(node->get_logger(), "pointNum of %d frame of %s: %d\n",
+                RCLCPP_INFO(node->get_logger(), "pointNum of %d frame of %s: %d",
                        pointCloudBuf.pckHeader.frame_id,
                        radars[radarId].topicName.c_str(),
                        radars[radarId].cntPointCloud);
@@ -363,7 +372,7 @@ int main(int argc, char** argv) {
                 //print measure time stamp
                 uint64_t sec = pointCloudBuf.pckHeader.sec;
                 uint32_t nsec = pointCloudBuf.pckHeader.nsec;
-                RCLCPP_INFO(node->get_logger(), "measure time stamp of %d frame of %s: %lu.%09lu\n",
+                RCLCPP_INFO(node->get_logger(), "measure time stamp of %d frame of %s: %lu.%09lu",
                        pointCloudBuf.pckHeader.frame_id,
                        radars[radarId].topicName.c_str(),
                        (unsigned long)sec,
