@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /radarFL1/Status1
       Splitter Ratio: 0.5
     Tree Height: 707
   - Class: rviz_common/Selection
@@ -30,6 +29,24 @@ Visualization Manager:
   Class: ""
   Displays:
     - Alpha: 0.5
+      Cell Size: 100
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid100m
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 6
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Alpha: 0.30000001192092896
       Cell Size: 10
       Class: rviz_default_plugins/Grid
       Color: 160; 160; 164
@@ -44,7 +61,7 @@ Visualization Manager:
         Y: 0
         Z: 0
       Plane: XY
-      Plane Cell Count: 20
+      Plane Cell Count: 60
       Reference Frame: <Fixed Frame>
       Value: true
     - Alpha: 1
@@ -179,6 +196,32 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: pointNum
+      Namespaces:
+        basic_shapes: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /TEXT_VIEW_FACING
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: origin
+      Namespaces:
+        "": true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /origin
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -234,12 +277,47 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 4.08819580078125
+      Scale: 2.01837158203125
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz_default_plugins)
       X: -0.5919334888458252
       Y: 1.9996349811553955
-    Saved: ~
+    Saved:
+      - Angle: -1.5707999467849731
+        Class: rviz_default_plugins/TopDownOrtho
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: false
+        Invert Z Axis: false
+        Name: BEV-200m
+        Near Clip Distance: 0.009999999776482582
+        Scale: 2.01837158203125
+        Target Frame: <Fixed Frame>
+        Value: TopDownOrtho (rviz_default_plugins)
+        X: -0.5919334888458252
+        Y: 1.9996349811553955
+      - Class: rviz_default_plugins/Orbit
+        Distance: 100
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: false
+        Focal Point:
+          X: -0.5919334888458252
+          Y: 1.9996349811553955
+          Z: 0
+        Focal Shape Fixed Size: true
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: 3D-200m
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.6000000238418579
+        Target Frame: <Fixed Frame>
+        Value: Orbit (rviz_default_plugins)
+        Yaw: 3.1573898792266846
 Window Geometry:
   Displays:
     collapsed: false
