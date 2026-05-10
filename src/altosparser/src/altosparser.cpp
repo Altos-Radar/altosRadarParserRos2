@@ -22,6 +22,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <array>
+#include "ament_index_cpp/get_package_share_directory.hpp"
 using namespace std;
 #define vrMax 60
 #define vrMin -60
@@ -185,7 +186,9 @@ int main(int argc, char** argv) {
 
     // read files for rcs calculation
     float* rcsBuf = (float*)malloc(1201 * sizeof(float));
-    FILE* fp_rcs = fopen("data//rcs.dat", "rb");
+    std::string package_path = ament_index_cpp::get_package_share_directory("altosparser");
+    std::string file_path = package_path + "/data/rcs.dat";
+    FILE* fp_rcs = fopen(file_path.c_str(), "rb");
     if (fp_rcs == NULL)
     {
         RCLCPP_ERROR(node->get_logger(), "[WARNING] data/rcs.dat not found in pwd [WARNING]\n");

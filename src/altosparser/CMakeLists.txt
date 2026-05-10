@@ -8,6 +8,7 @@ endif()
 
 # Find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -22,6 +23,7 @@ find_package(geometry_msgs REQUIRED)
 add_executable(altosparser src/altosparser.cpp)
 ament_target_dependencies(altosparser
   rclcpp
+  ament_index_cpp
   pcl_conversions
   sensor_msgs
   std_msgs
